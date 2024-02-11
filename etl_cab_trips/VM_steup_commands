@@ -1,0 +1,182 @@
+In this post, I want to share an exemplary data engineering project run using GCP (Google Cloud Platform). The steps regarding this project are:
+
+Collecting raw data
+
+Designing a Data Model
+
+Creating a storage account on GCP
+
+Setting up a Virtual Machine(VM)
+
+Running the Extract, Load, Transform(ETL) process using Mage(a modern data engineering pipeline)
+
+Creating the Google BigQuery Database
+
+Manipulating the Data(creating new tables, …) on BigQuery
+
+Visualizing the data using Looker Studio
+
+The GitHub of this project is available here. 
+
+Seems to be a little long! but let’s get started.
+
+Raw Data
+We are going to use the well-known TLC Trip Record Data dataset. It contains the yellow and green taxi trips in New York and is published every month by the official New York  data website(nyc.gov). For this project, I used the data from May 2023, which you can access from this web page. The data catalog is also available using this link. The raw data has 100,000 rows and 19 columns. For a better understanding, here is a preview of the data:
+
+
+
+
+
+
+Designing the Data Model
+
+For better data integrity and consistency, it is crucial to design a data model for our data. Here is the data model designed for this dataset:
+
+
+
+
+
+
+Then, I start applying this data model in a notebook environment to create new separated tables(and see them for a better understanding of the data). The code generated in this step will be used further in the ETL process. you can find the Python file regarding this step here. 
+
+At the end of this part, we'll have the following tables:
+
+fact table: this table includes quantitative values for each trip, like total cost, tip amount, and .... in addition to foreign key columns used to connect to other tables. 
+
+pickup location table
+
+dropoff location table
+
+passenger count
+
+trip distance
+
+date time
+
+rate code type
+
+payment type
+
+
+
+For example, the rate code table looks like this:
+
+
+
+
+
+
+and the fact table:
+
+
+
+
+
+
+Creating a storage account on GCP
+
+We are going to create a "bucket storage" on GCP(in Azure, it is called blob storage). Log into Google Cloud Platform(you have already access to it, use your Gmail account!). Then, create a new project(I named it mage-demo). 
+
+Then, from the left-hand menu, select “cloud storage” and then “buckets”. choose the name and area(near to yourself). for this example project, make sure to untick the “Enforce public access prevention” for ease of access(don’t forget to remove this access after you’re done):
+
+
+
+
+
+creating a bucket in GCP
+
+
+
+
+setting access control for the bucket
+then, upload the CSV file into the bucket. 
+
+then, go to the “Permission” tab and set the access control to “Fine-grained” access:
+
+
+
+
+
+
+In the next step, edit the access to the file, click on the 3 dots edit access to "public-allUsers", and grant a reader access. 
+
+Setting up a Virtual Machine(VM)
+
+In the next step, create a Compute Engine(VM) instance in the project: 
+
+
+
+
+
+
+I recommend choosing the E2 or N2 machine so your queries will run a little bit faster while controlling for price. also in the firewall section, make sure to allow “HTTP” and “HTTPS” traffic. For me, E2 machines broke down multiple times during the ETL process, so I had to use the N2 series finally. 
+
+notice: for the OS of your machine, set it to Debian 11 or older, or Ubuntu 22 or older. This is because in the next steps, you aren't required to set up a virtual environment on them which adds some extra work to your process. 
+
+After the VM instance is created, use the SSH connection and run the machine:
+
+
+
+
+
+
+we need to install the following files on our VM:
+
+python3
+
+git
+
+wget
+
+pip
+
+mage-ai
+
+google-cloud
+
+google-cloud-bigquery
+
+The code to install these packages is provided here. 
+
+# updating the os
+sudo apt-get update -y
+
+# Install Python and pip 
+sudo apt-get install python3-distutils
+
+sudo apt-get install python3-apt
+
+
+sudo apt-get install wget
+
+
+#install pip
+sudo apt install python3-pip
+
+
+#install git
+sudo apt install git
+
+#check out git installation(should return a version value)
+git –version 
+
+#if you encountered the "bad git problem", find the path git is #installed(for me it was: /usr/bin/git):
+
+which git
+
+#add git to your local path
+export PATH="$PATH:/usr/bin/git"  # Replace `/usr/bin/git` with the actual directory where Git is installed
+
+# Install Mage(use pipx)
+sudo pipx install mage-ai
+
+# Install Google Cloud Library
+sudo pip3 install google-cloud
+
+sudo pip3 install google-cloud-bigquery
+
+#start mage
+mage start [your_project_name_on_GCP]
+
+
+
